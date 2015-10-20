@@ -1,14 +1,12 @@
-start GENSRFV2()
+start GENSRFV2(parmfile)
  $looplimit = 0
- %maptest
- %include c_incmaps
- %allow_nonmapped_io
- %include inc_sysLibDef 
- %include inc_ANSA_DST
- %include inc_CANS_DST
+ %define checked_box "{font face='Wingdings 2' size='4' color='black'}S{/font}"
+ %define unchecked_box "{font face='Webdings' size='2.5' color='black'}c{/font}"
 
  parmfile is x
- parmfile = "DX10"
+ if parmfile !dp
+  parmfile = "GENSRFV2"
+ endif
 
  o_user      is x
  o_pass      is x
@@ -16,16 +14,26 @@ start GENSRFV2()
  o_db        is x
  icd10_table is x
  icd9_table  is x
+ 
+ center_name    is x
+ center_npi     is x
+ center_phone   is x
+ center_fax     is x
+ center_contact is x
+ contact_phone  is x
+ 
+ CLLIST     is x
+ cltList[]  is x
 
- ICD10_Table = "[t_ICD-10_ICD-10_with_GEM_AXIS]"
- ICD9_Table = "[t_ICD-10_ICD-9_with_GEM_AXIS]"
+ %global c_el_fs,mco_fs
+ c_el_fs[]        is b
+ mco_fs[]         is b
+ mco_names[]      is x
+ mco_fax_number[] is x 			   
+
  getparm(parmfile)
- 
- 
- %define checked_box "{font face='Wingdings 2' size='4' color='black'}S{/font}"
- %define unchecked_box "{font face='Webdings' size='2.5' color='black'}c{/font}"
-' %define unchecked_box "{font face='Wingdings' size='4' color='black'}o{/font}" 
 
+'system DSTs
  cid  		  is x
  c.fn 		  is x
  c.mn         is x
@@ -51,21 +59,21 @@ start GENSRFV2()
  CANSA_compd[]     is d
  CANSA_devjust[]   is x
  
- result is x
- number is x
+ result    is x
+ number    is x
  mconame   is x
  mco_phone is x
  mco_fax   is x
 
- rc is i
+ rc        is i
  
  unique_mco[]  is x 
  
  index         is i
+ clt_index     is i
  button[]      is x
  selected_mco  is x
  
- DX_ICD9       is x
  DX_ICD10      is x
  DX_ICD10_uniq is x
  DX_Name       is x
@@ -76,66 +84,97 @@ start GENSRFV2()
  update_list_uid[]  is n
  update_list_type[] is x
  
- page is x
- 
- center_name    is x
- center_npi     is x
- center_phone   is x
- center_fax     is x
- center_contact is x
- contact_phone  is x
- 
+ page           is x
  dx_converted   is x
  
+ c.ansa.rec       is h
+ c.ansa.date      is d
+ c.ansa.type      is x
+ c.ansa.compd     is d
+ c.ansa.aloc      is x
+ c.ansa.rloc      is x
+ c.ansa.dloc      is x
+ c.ansa.devjust   is x
+ c.ansa.mcotx     is d
+ c.ansa.snapid    is x
+ c.ansa.alocedate is d
+ c.ansa.alocdate  is d
+ c.ansa.mconame   is x
+ c.cans.rec       is h
+ c.cans.date      is d
+ c.cans.type      is x
+ c.cans.compd     is d
+ c.cans.aloc      is x
+ c.cans.rloc      is x
+ c.cans.dloc      is x
+ c.cans.devjust   is x
+ c.cans.mcotx     is d
+ c.cans.snapid    is x
+ c.cans.alocedate is d
+ c.cans.alocdate  is d
+ c.cans.mconame   is d 
+ 
  {"lib_DX10"}Set_Sql(o_user, o_pass, o_ds, o_db, icd10_table, icd9_table)
- 
- select $uc($seg($mscname,1,5)) 
-  case "HELEN" center_name    = "Helen Farabee Centers"
-               center_npi     = "1457479511"
-			   center_phone   = "940-397-3107"
-			   center_fax     = "940-696-6205"
-			   center_contact = "Judy Michael"
-			   contact_phone  = "940-397-3107"			   
-  case "PECAN" center_name    = "Pecan Valley Centers"
-               center_npi     = "1891915708"
-			   center_phone   = "254-552-2013"
-			   center_fax     = "254-965-1350"
-			   center_contact = "Ernie Smith"
-			   contact_phone  = "254-552-2013"
- endselect 
- 
- $setstyle(".tnr_7", "font-family:times new roman", "font-size:7pt", "color:black")
+  
  $setstyle(".tnr_8", "font-family:times new roman", "font-size:8pt", "color:black")
  $setstyle(".tnr_9", "font-family:times new roman", "font-size:9pt", "color:black")
- $setstyle(".tnr_10", "font-family:times_new_roman", "font-size:10pt", "color:black")
- $setstyle(".lbuttons","width:95px","font-family:arial","font:bold","background-color:darkblue","color:white","cursor:hand")
  
- $brmsg("Step 1: Read Assessment Data",1,"C","Processing")
- rc = $dbstart(2,cid,"I")
- index = 0
- do while rc < 3
-  rc = $dbreadnext(2,cid,c.ansa.rec,c.ansa.date,c.ansa.type,c.ansa.compd,c.ansa.aloc,c.ansa.rloc,c.ansa.devjust,c.ansa.mcotx,c.ansa.snapid,c.ansa.alocedate)
-  if c.ansa.rec dp and c.ansa.date dp and c.ansa.compd dp and c.ansa.aloc dp and c.ansa.mcotx !dp and (c.ansa.type = "1" or c.ansa.type = "2" or c.ansa.type = "11") and c.ansa.compd > 8/31/2014
-   (void)$arrpush(clients[++index],cid)
-   unique_id[index] = c.ansa.rec[uid]
-   if c.ansa.devjust dp
-    snap_id[index] = c.ansa.snapid
-   endif	
-   CANSANSA[index] = "ANSA"
-   GetPreviousCANSA(cid,c.ansa.date,c.ansa.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
-  else
-   rc = $dbread(2,cid,c.cans.rec,c.cans.date,c.cans.type,c.cans.compd,c.cans.aloc,c.cans.rloc,c.cans.devjust,c.cans.mcotx,c.cans.snapid,c.cans.alocedate)  
-   if c.cans.rec dp and c.cans.date dp and c.cans.compd dp and c.cans.aloc dp and c.cans.mcotx !dp and (c.cans.type = "1" or c.cans.type = "2" or c.cans.type = "11") and c.cans.compd > 8/31/2014
-   (void)$arrpush(clients[++index],cid)
-    unique_id[index] = c.cans.rec[uid]
-    if c.cans.devjust dp
-	 snap_id[index] = c.cans.snapid	
-	endif	
-    CANSANSA[index] = "CANS"	
-    GetPreviousCANSA(cid,c.cans.date,c.cans.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
-   endif
-  endif 
- enddo
+ if CLLIST !dp
+  $brmsg("Step 1: Read Assessment Data - Client DB",1,"C","Processing") 
+  rc = $dbstart(2,cid,"I")
+  index = 0
+  do while rc < 3
+   rc = $dbreadnext(2,cid,c.ansa.rec,c.ansa.date,c.ansa.type,c.ansa.compd,c.ansa.aloc,c.ansa.rloc,c.ansa.devjust,c.ansa.mcotx,c.ansa.snapid,c.ansa.alocedate)
+   if c.ansa.rec dp and c.ansa.date dp and c.ansa.compd dp and c.ansa.aloc dp and c.ansa.mcotx !dp and (c.ansa.type = "1" or c.ansa.type = "2" or c.ansa.type = "11") and c.ansa.compd > 8/31/2014
+    (void)$arrpush(clients[++index],cid)
+    unique_id[index] = c.ansa.rec[uid]
+    if c.ansa.devjust dp
+     snap_id[index] = c.ansa.snapid
+    endif	
+    CANSANSA[index] = "ANSA"
+    GetPreviousCANSA(cid,c.ansa.date,c.ansa.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
+   else
+    rc = $dbread(2,cid,c.cans.rec,c.cans.date,c.cans.type,c.cans.compd,c.cans.aloc,c.cans.rloc,c.cans.devjust,c.cans.mcotx,c.cans.snapid,c.cans.alocedate)  
+    if c.cans.rec dp and c.cans.date dp and c.cans.compd dp and c.cans.aloc dp and c.cans.mcotx !dp and (c.cans.type = "1" or c.cans.type = "2" or c.cans.type = "11") and c.cans.compd > 8/31/2014
+    (void)$arrpush(clients[++index],cid)
+     unique_id[index] = c.cans.rec[uid]
+     if c.cans.devjust dp
+	  snap_id[index] = c.cans.snapid	
+	 endif	
+     CANSANSA[index] = "CANS"	
+     GetPreviousCANSA(cid,c.cans.date,c.cans.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
+    endif
+   endif 
+  enddo
+ else
+  $brmsg(`"Step 1: Read Assessment Data - List: " + CLLIST`,1,"C","Processing") 
+  rc = $getlist(cltlist[],2,CLLIST)
+  clt_index = 0
+  index = 0
+  do while clt_index++ < $maxarray(cltlist[])
+   rc = $dbread(2,cltlist[clt_index],c.ansa.rec,c.ansa.date,c.ansa.type,c.ansa.compd,c.ansa.aloc,c.ansa.rloc,c.ansa.devjust,c.ansa.mcotx,c.ansa.snapid,c.ansa.alocedate)
+   if c.ansa.rec dp and c.ansa.date dp and c.ansa.compd dp and c.ansa.aloc dp and c.ansa.mcotx !dp and (c.ansa.type = "1" or c.ansa.type = "2" or c.ansa.type = "11") and c.ansa.compd > 8/31/2014
+    (void)$arrpush(clients[++index],cltlist[clt_index])
+    unique_id[index] = c.ansa.rec[uid]
+    if c.ansa.devjust dp
+     snap_id[index] = c.ansa.snapid
+    endif	
+    CANSANSA[index] = "ANSA"
+    GetPreviousCANSA(cltlist[clt_index],c.ansa.date,c.ansa.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
+   else
+    rc = $dbread(2,cltlist[clt_index],c.cans.rec,c.cans.date,c.cans.type,c.cans.compd,c.cans.aloc,c.cans.rloc,c.cans.devjust,c.cans.mcotx,c.cans.snapid,c.cans.alocedate)  
+    if c.cans.rec dp and c.cans.date dp and c.cans.compd dp and c.cans.aloc dp and c.cans.mcotx !dp and (c.cans.type = "1" or c.cans.type = "2" or c.cans.type = "11") and c.cans.compd > 8/31/2014
+    (void)$arrpush(clients[++index],cltlist[clt_index])
+     unique_id[index] = c.cans.rec[uid]
+     if c.cans.devjust dp
+	  snap_id[index] = c.cans.snapid	
+	 endif	
+     CANSANSA[index] = "CANS"	
+     GetPreviousCANSA(cltlist[clt_index],c.cans.date,c.cans.aloc,CANSANSA[index],CANSA_Reduction[index],CANSA_Increase[index],CANSA_Coc[index])
+    endif
+   endif 
+  enddo  
+ endif
  
  $brmsg("Step 2: Gather Client/MCO List.",2,"C","PROCESSING")
  index = 0
@@ -158,7 +197,9 @@ start GENSRFV2()
   $submitopt("off", "")
   $cancelopt("off", "Exit")
   $form()
-  {"lib_COMMON"}ChangeTitle("GENSRF")
+   $ctag("<script language='Javascript'>")
+   $ctag(`"    document.title=" + x"22" + "GENSRF" + x"22" + ";"`)
+   $ctag("</script>")  
    $style("normal")
    $br(2)$text("{center}SRF Form Generator{/center]","h1")
    $bstyle("lbutton", "lbutton")
@@ -181,23 +222,21 @@ start GENSRFV2()
    selected_mco = unique_mco[index]
    (void)$dbread(12,selected_mco,$$con.nm)
    select selected_mco
-    case "M-UNITED" mco_fax = "877-450-6011"
-	case "M-SUPIOR" mco_fax = "866-469-0725"
-	case "M-FRSTCR" mco_fax = "866-354-8758"
-	case "M-CIGNA"  mco_fax = "877-809-0787"
-	case "M-AMGRP"  mco_fax = "866-877-5229"
-	case "M-AETNA"  mco_fax = "855-841-8355"
 	case "Generic Medicaid"	$$con.nm = "Generic Medicaid"
 	                        mco_fax = "Generic Medicaid"
+    case other index = $find(selected_mco,mco_names[],1,"F")
+	           mco_fax = mco_fax_number[index]							
    endselect
    do while page = "2"
     $submitopt("off", "Update Status")
     $cancelopt("off", "Back")
     $form($scriptid)
-     {"lib_COMMON"}ChangeTitle("GENSRF")
+     $ctag("<script language='Javascript'>")
+     $ctag(`"    document.title=" + x"22" + "GENSRF" + x"22" + ";"`)
+     $ctag("</script>")  
      %include c_pbutton
-	 index = 0
      $brmsg(`"Generating Page: " + selected_mco`,2,"C","PROCESSING")
+	 index = 0	 
      do while index++ < $maxarray(clients[])
       if mconames[index] = selected_mco
 	   (void)$arrpush(update_list_id[],clients[index])
@@ -234,24 +273,10 @@ start GENSRFV2()
 					CANSA_devjust[index] = c.cans.devjust					
        endselect 
        (void)$dbread(2,clients[index],c.fn,c.mn,c.ln,c.bd,c.sex)	  
-	   if $uc($seg($mscname,1,5)) = "HELEN"
-	    DX_ICD9 = GETDX_HFC(clients[index])	  
-		DX_ICD10_uniq = GETDX10_Uniqid(clients[index],dx_converted)	  
-		if DX_ICD10_Uniq dp
-		 DX_ICD10 = {"lib_DX10"}DX_Code_Query(DX_ICD10_uniq,dx_converted)
-		 DX_Name = {"lib_DX10"}10_Desc_lookup(DX_ICD10_uniq,dx_converted)
-		else
-		 DX_Name = $dct(400,DX_ICD9)
-		endif
-	   else
-	    DX_ICD9 = GETDX_PV(clients[index])	  	  
-		DX_ICD10_uniq = GETDX10_Uniqid(clients[index],dx_converted)	  		
-		if DX_ICD10_Uniq dp
-		 DX_ICD10 = {"lib_DX10"}DX_Code_Query(DX_ICD10_uniq,dx_converted)
-		 DX_Name = {"lib_DX10"}10_Desc_lookup(DX_ICD10_uniq,dx_converted)
-        else
-		 DX_Name = $dct(300,DX_ICD9)
-	    endif		
+  	   DX_ICD10_uniq = GETDX10_Uniqid(clients[index],dx_converted)	  		
+	   if DX_ICD10_Uniq dp
+		DX_ICD10 = {"lib_DX10"}DX_Code_Query(DX_ICD10_uniq,dx_converted)
+		DX_Name = {"lib_DX10"}10_Desc_lookup(DX_ICD10_uniq,dx_converted)
 	   endif	 
 	   $setstyle("tnr_8")
        $br()$text("{center}{b}TEXAS STANDARD PRIOR AUTHORIZATION REQUEST FORM FOR HEALTH CARE SERVICES{/b}{/center}","tnr_9")
@@ -341,12 +366,7 @@ start GENSRFV2()
 		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text("{center}{b}Code{/b}{/center}")
 		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text("{center}{b}Start Date{/b}{/center}")
 		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text("{center}{b}End Date{/b}{/center}")
-		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")
-		      if DX_ICD10 dp
-			   $text("{center}{b}Diagnosis Description (ICD version{u} 10 {/u}){/b}{/center}")
-			  else
-			   $text("{center}{b}Diagnosis Description (ICD version{u} 9 {/u}){/b}{/center}")
-			  endif 
+		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text("{center}{b}Diagnosis Description (ICD version{u} 10 {/u}){/b}{/center}")
 		      $col("center",,,"1","1","style='border-right:0.05em solid #000000;border-top:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text("{center}{b}Code{/b}{/center}")
 		     $row()
 		      $col(,,,"1","1","style='border-left:0.05em solid #000000;border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text(CANSA_ALOC_Name[index]) 
@@ -354,11 +374,7 @@ start GENSRFV2()
 		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text(CANSA_start[index]) 
 		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text(CANSA_end[index])
 		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text(DX_Name) 
-		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")if DX_ICD10 dp
-			                                                                                                   $text(DX_ICD10)
-																											  else
-			                                                                                                   $text(DX_ICD9)																											  
-																											  endif 
+		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$text(DX_ICD10)
 		     $row()
 		      $col(,,,"1","1","style='border-left:0.05em solid #000000;border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$ctag("&nbsp;")
 		      $col(,,,"1","1","style='border-right:0.05em solid #000000;border-bottom:0.05em solid #000000;'")$ctag("&nbsp;")
@@ -444,7 +460,9 @@ start GENSRFV2()
 	  $tag("<p class='breakhere'></p>")
 	  if snap_id[index] dp
 	   {"l_snapLib"}sn_viewSnap(snap_id[index])
-       {"lib_COMMON"}ChangeTitle("GENSRF")		 
+       $ctag("<script language='Javascript'>")
+       $ctag(`"    document.title=" + x"22" + "GENSRF" + x"22" + ";"`)
+       $ctag("</script>")  
        $tag("<p class='breakhere'></p>")
 	  endif 	  
      endif
@@ -488,12 +506,8 @@ start GENSRFV2()
   endif
  enddo
 end GENSRFV2
-
 %include inc_GetParm
-%include inc_GetOption
 
-'This function will check the client eligibility record to see if the person has Medicaid.
-'Each center will need to edit the function to reflect their own FS ID's for Medicaid.
 function check_medicaid(client, result, number, mconame) is x
  client     is x
  result     is x
@@ -508,639 +522,21 @@ function check_medicaid(client, result, number, mconame) is x
  rc         is b
  $clear(result,number,mconame)
  rc = $dbread(02, client, c.el, c.el.fs, c.el.ef.dt, c.el.la.dt, c.el.id.1,$$el.cont)
- if $uc($seg($mscname,1,5)) = "HELEN"
-  do while rc < 2 and result !dp
-   if (c.el.fs = 13 or c.el.fs = 210) and c.el.ef.dt <= $today and (c.el.la.dt > $today or c.el.la.dt !dp)
-    result = "Medicaid Recipient"   
-    number = c.el.id.1
-    if c.el.fs = 210
-     mconame = $$el.cont
-    else
-     mconame = "Generic Medicaid"
-    endif	
+ do while rc < 2 and result !dp
+  if $find(c.el.fs,c_el_fs[],1,"F") > 0 and c.el.ef.dt <= $today and (c.el.la.dt > $today or c.el.la.dt !dp)
+   result = "Medicaid Recipient"   
+   number = c.el.id.1
+   if $find(c.el.fs,mco_fs[],1,"F") > 0
+    mconame = $$el.cont
    else
-    rc = $dbreadnextdst(02, client, c.el, c.el.fs, c.el.ef.dt, c.el.la.dt, c.el.id.1,$$el.cont)
-   endif
-  enddo
- else
-  do while rc < 2 and result !dp
-   if (c.el.fs = 62 or c.el.fs = 63 or c.el.fs = 64 or c.el.fs = 65 or c.el.fs = 67 or c.el.fs = 210) and c.el.ef.dt <= $today and (c.el.la.dt > $today or c.el.la.dt !dp)
-    result = "Medicaid Recipient"   
-    number = c.el.id.1
-    if c.el.fs = 210
-     mconame = $$el.cont
-    else
-     mconame = "Generic Medicaid"
-    endif	
-   else
-    rc = $dbreadnextdst(02, client, c.el, c.el.fs, c.el.ef.dt, c.el.la.dt, c.el.id.1,$$el.cont)
-   endif
-  enddo 
- endif
+    mconame = "Generic Medicaid"
+   endif	
+  else
+   rc = $dbreadnextdst(02, client, c.el, c.el.fs, c.el.ef.dt, c.el.la.dt, c.el.id.1,$$el.cont)
+  endif
+ enddo
  $allowupdate(result, number, mconame)
 end check_medicaid
-
-function GetDX_HFC(client) is x
- client  is x
- DX_DCT  is b
- DX_DCT2 is b
- DX_DCT3 is b
- DX_DCT4 is b
- DX_DCT5 is b
- DX_DCT6 is b
-
-'*********Datacode Tables, Change These*****************
- DX_DCT = 400    
- DX_DCT2 = DX_DCT
- DX_DCT3 = DX_DCT
- DX_DCT4 = DX_DCT
- DX_DCT5 = DX_DCT
- DX_DCT6 = DX_DCT
-'*******************************************************
-
-rc_dx_dstlist   is i
-dx_dstlist      is dstlist
-c.dsmiiir       is h   'DSM-IIIR DIAGNOSIS RECORD      
-c.diag          is x   'AXIS I LEVEL 1                 
-c.dx.when       is x   'WHEN? (A=ADM,E=EST,D=DISCH)    
-c.dx4           is x   'DSM-IV AXIS I & II CODES       
-c.dxaxi2        is x   'AXIS I LEVEL 2                 
-c.dxaxi3        is x   'AXIS I LEVEL 3                 
-c.dxaxi4        is x   'AXIS I LEVEL 4                 
-c.dxaxi5        is x   'AXIS I LEVEL 5                 
-c.dxaxi6        is x   'AXIS I LEVEL 6                 
-c.dxaxii1       is x   'AXIS II LEVEL 1                
-c.dxaxii2       is x   'AXIS II LEVEL 2                
-c.dxaxii3       is x   'AXIS II LEVEL 3                
-c.dxaxii4       is x   'AXIS II LEVEL 4                
-c.dxaxii5       is x   'AXIS II LEVEL 5                
-c.dxaxii6       is x   'AXIS II LEVEL 6                
-c.dxaxiii1      is x   'AXIS III LEVEL 1               
-c.dxaxiii2      is x   'AXIS III LEVEL 2               
-c.dxaxiii3      is x   'AXIS III LEVEL 3               
-c.dxaxiii4      is x   'AXIS III LEVEL 4               
-c.dxaxiii5      is x   'AXIS III LEVEL 5               
-c.dxaxiii6      is x   'AXIS III LEVEL 6               
-c.dxaxiv        is x   'AXIS IV                        
-c.dxaxvp        is x   'AXIS V-PAST GLOBAL ASSESSMENT  
-c.dxaxvc        is x   'AXIS V-CURRENT GLOBAL ASSESS.  
-c.cabl          is x   'CURRENT ABL                    
-c.pabl          is x   'POTENTIAL ABL                  
-c.dxdate        is d   'DIAGNOSIS DATE                 
-c.dxiiidte      is d   'AXIS III DIAGNOSIS DATE        
-c.prdxaxis      is x   'PRINCIPAL DIAGNOSIS AXIS       
-c.dxreason      is x   'REASON FOR DIAGNOSIS           
-c.dx.comment    is x   'DIAGNOSIS COMMENTS             
-c.dx.isn        is x   'DIAGNOSIS ISN REFERENCE        
-c.dxaxiv-a      is x   'AXIS IV (01/01/95 VERSION)     
-c.who.diag      is x   'WHO DIAGNOSED CLIENT(?)        
-c.dx.stat       is x   'DIAGNOSIS STATUS               
-c.dxflag        is d   'DIAGNOSIS FLAG DATE            
-c.a1l1          is x   'AXIS I LEVEL I                 
-c.dx.ax3        is x   'AXIS III                       
-c.dx.ax4.a      is x   'AXIS IV A                      
-c.dx.ser        is b   'DIAGNOSIS SERVICE CODE         
-c.dx.time       is t   'DIAGNOSIS START TIME           
-c.dx.dur        is t   'DIAGNOSIS DURATION             
-c.dx.ru         is b   'DIAGNOSIS RU                   
-c.dx.loc        is x   'DIAGNOSIS LOCATION CODE        
-c.dx.proj       is b   'DIAGNOSIS PROJECT CODE         
-c.dx.serv       is x   'DX SERVICE WITH COUNSELING     
-c.dx.fill       is x   'CLIENT DSM-IV FILLER           
-c.dx.comme      is x   'DIAGNOSIS COMMENTS             
-c.dx.by         is x   'DIAGNOSIS MADE BY              
-c.dx.ax4.c      is x   'DSM-IV AXIS IV LEVEL C         
-c.dx.ax4.d      is x   'DSM-IV AXIS IV LEVEL D         
-c.paamd         is x   'PRIMARY AAMD                   
-c.saamd         is x   'SECONDARY AAMD                 
-c.taamd         is x   'TERTIARY AAMD                  
-c.genetic       is x   'GENETIC                        
-c.c.anomal      is x   'CRANIAL ANOMALY                
-c.sen.imp       is x   'SENSORY IMPARIAMENT            
-c.precept       is x   'PRECEPTION                     
-c.conv.dis      is x   'CONVULSIVE DISORDER            
-c.psy.impa      is x   'PSYCH IMPARMENT                
-c.motor.dy      is x   'MOTOR DYSFUCTION               
-c.aamd.dat      is d   'AAMD DATE                      
-c.iq.score      is x   'IQ SCORE                       
-c.iq.date       is d   'IQ TEST DATE                   
-c.iq.type       is x   'IQ SCORE TYPE                  
-c.sq.score      is x   'SQ SCORE                       
-c.sq.date       is d   'SQ TEST DATE                   
-c.sq.type       is x   'SQ TEST TYPE                   
-c.dx.prese      is x   'PRESENTING ISSUE               
-c.dx.ax4.b      is x   'DSM-IV AXIS IV LEVEL B         
-c.dx.ax4.e      is x   'DSM-IV AXIS IV LEVEL E         
-c.dx.ax4.f      is x   'DSM-IV AXIS IV LEVEL F         
-c.dx.ax4.g      is x   'DSM-IV AXIS IV LEVEL G         
-c.dx.ax4.h      is x   'DSM-IV AXIS IV LEVEL H         
-c.dx.sys        is x   'DIAGNOSIS SYSTEM               
-c.dx.ax4.i      is x   'DSM-IV AXIS IV LEVEL I         
-c.dx.ax4.j      is x   'DSM-IV, AXIS IV LEVEL J        
-c.dx.needed     is x   'NEW DIAGNOSIS NEEDED FLAG
-
-rc_dx_dstlist = $dstlist(dx_dstlist,02,
-c.dsmiiir,c.diag,c.dx.when,c.dx4,c.dxaxi2,c.dxaxi3,c.dxaxi4,c.dxaxi5,c.dxaxi6,c.dxaxii1,c.dxaxii2,c.dxaxii3,c.dxaxii4,c.dxaxii5,c.dxaxii6,
-c.dxaxiii1,c.dxaxiii2,c.dxaxiii3,c.dxaxiii4,c.dxaxiii5,c.dxaxiii6,c.dxaxiv,c.dxaxvp,c.dxaxvc,c.cabl,c.pabl,c.dxdate,c.dxiiidte,c.prdxaxis,c.dxreason,c.dx.comment,
-c.dx.isn,c.dxaxiv-a,c.who.diag,c.dx.stat,c.dxflag,c.a1l1,c.dx.ax3,c.dx.ax4.a,c.dx.ser,c.dx.time,c.dx.dur,c.dx.ru,c.dx.loc,c.dx.proj,c.dx.serv,c.dx.fill,c.dx.comme,c.dx.by,
-c.dx.ax4.c,c.dx.ax4.d,c.paamd,c.saamd,c.taamd,c.genetic,c.c.anomal,c.sen.imp,c.precept,c.conv.dis,c.psy.impa,c.motor.dy,c.aamd.dat,c.iq.score,
-c.iq.date,c.iq.type,c.sq.score,c.sq.date,c.sq.type,c.dx.prese,c.dx.ax4.b,c.dx.ax4.e,c.dx.ax4.f,c.dx.ax4.g,c.dx.ax4.h,c.dx.sys,c.dx.ax4.i,c.dx.ax4.j,c.dx.needed)
-
-  DXType is x
-  DX     is x
-  DXCat  is x
-  DXDate is d
-  DXGaf  is i
-  PP     is x
-  rc     is b 
-
-  rc = $dbread(02, client, dx_dstlist)  
-  dxtype = $dct(dx_dct, c.diag, "1")
-  DX     = c.diag
-  DXGaf  = c.dxaxvc
-  DXDate = c.dxdate
- 
-  if dxtype = "O" and C.DXAXI2 dp
-   dxtype = $dct(dx_dct, C.DXAXI2, "1")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
- 	DX = C.DXAXI2
-   endif
-  endif
-  if dxtype = "O" and C.DXAXI3 dp
-   dxtype = $dct(dx_dct, C.DXAXI3, "1")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
-    DX = C.DXAXI3
-   endif
-  endif
-  if dxtype = "O" and C.DXAXI4 dp
-   dxtype = $dct(dx_dct, C.DXAXI4, "1")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
-    DX = C.DXAXI4
-   endif
-  endif
-  if dxtype = "O" and C.DXAXI5 dp
-   dxtype = $dct(dx_dct, C.DXAXI5, "1")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
-    DX = C.DXAXI5
-   endif
-  endif
-  if dxtype = "O" and C.DXAXI6 dp
-   dxtype = $dct(dx_dct, C.DXAXI6, "1")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
-    DX = C.DXAXI6
-   endif
-  endif
-  select DXType
-   case "B" dxcat = "Bipolar"
-   case "S" dxcat = "Schizophrenia"
-   case "D" select DX
-             case "29624" dxcat = "MDD - With Psychotic Features"
-			 case "29634" dxcat = "MDD - With Psychotic Features"
-             case "296.24" dxcat = "MDD - With Psychotic Features"
-			 case "296.34" dxcat = "MDD - With Psychotic Features"
-			 case other    dxcat = "MDD - Without Psychotic Features"
-			endselect 
-   case "O" dxcat = "Other"
-   case !dp dxcat = "Other"
-            DXType = "O"
-  endselect
-
-  PP = "N"  
-  if DXType = "O"
-   if PriorityPop(c.diag) = "Y"
-    PP = "Y"
-   elseif PriorityPop(C.DXAXI2) = "Y" 
-    PP = "Y"   
-   elseif PriorityPop(C.DXAXI3) = "Y" 
-    PP = "Y"
-   elseif PriorityPop(C.DXAXI4) = "Y" 
-    PP = "Y"
-   elseif PriorityPop(C.DXAXI5) = "Y" 
-    PP = "Y"
-   elseif PriorityPop(C.DXAXI6) = "Y"	
-    PP = "Y"
-   endif
-  endif  
-  GetDX_HFC = DX
- end GETDX_HFC
- 
-function GetDX_PV(client) is x
- client  is x
-DX_DCT  is b
-DX_DCT2 is b
-DX_DCT3 is b
-DX_DCT4 is b
-DX_DCT5 is b
-DX_DCT6 is b
-
-'*********Datacode Tables, Change These*****************
-DX_DCT = 300    
-'*******************************************************
-
-rc_dx_dstlist   is i
-dx_dstlist      is dstlist
-C.DXR           is h 'Diagnosis Record                               
-C.AXILEV1       is x 'Axis I, Level 1                                
-C.AXILEV2       is x 'Axis I, Level 2                                
-C.AXILEV3       is x 'Axis I, Level 3                                
-C.AXIILEV1      is x 'Axis II, Level 1                               
-C.AXIILEV2      is x 'Axis II, Level 2                               
-C.AXIILEV3      is x 'Axis II, Level 3                               
-C.AX3LEV1       is x 'Axis III, Level 1                              
-C.AX3LEV2       is x 'Axis III, Level 2                              
-C.AX3LEV3       is x 'Axis III, Level 3                              
-C.AXISIV        is x 'Axis IV                                        
-C.AX4.A         is x 'Axis IV, Level 1                               
-C.AX4L1COM      is x 'Axis IV, Level 1-Comments                      
-C.AX4.B         is x 'Axis IV, Level 2                               
-C.AX4L2COM      is x 'Axis IV, Level 2-Comments                      
-C.AX4.C         is x 'Axis IV, Level 3                               
-C.AX4L3COM      is x 'Axis IV, Level 3-Comments                      
-C.AX4.D         is x 'Axis IV, Level 4                               
-C.AX4L4COM      is x 'Axis IV, Level 4-Comments                      
-C.AX4.E         is x 'Axis IV, Level 5                               
-C.AX4L5COM      is x 'Axis IV, Level 5-Comments                      
-C.AX4.F         is x 'Axis IV, Level 6                               
-C.AX4L6COM      is x 'Axis IV, Level 6-Comments                      
-C.AX4.G         is x 'Axis IV, Level 7                               
-C.AX4L7COM      is x 'Axis IV, Level 7-Comments                      
-C.AX4.H         is x 'Axis IV, Level 8                               
-C.AX4L8COM      is x 'Axis IV, Level 8-Comments                      
-C.AX4.I         is x 'Axis IV, Level 9                               
-C.AX4L9COM      is x 'Axis IV, Level 9-Comments                      
-C.AXVCURR       is b 'Axis V - Current GAF                           
-C.AXVPAST       is b 'Axis V - Past GAF                              
-C.ABLCURR       is x 'Adaptive Behavior Lvl-Current                  
-C.ABLPOTEN      is x 'Adaptive Behavior Lvl-Potentia                 
-C.DX.MRLOF      is x 'MR Level Of Functioning                        
-C.DXDATE        is d 'Diagnosis date                                 
-C.DXACTION      is x 'Reason For Diagnosis                           
-C.DXBYSTAF      is x 'Staff Person Who Diagnosed                     
-C.LZ.RAJ        is x 'LZ/RAJ?                                        
-C.DX.FLAG       is d 'Diagnosis - CARE Flag                          
-C.DX.FILL       is x 'Diagnosis Filler                               
-C.AXISINDI      is x 'Axis Indicator                                 
-C.PPDIND        is x 'Priority Population Indicator                  
-C.OPERDXID      is x 'DX ENTRY OPERATOR ID                           
-C.DIA.ACT       is x 'Diagnosis Action Code                          
-C.DX.MRLON      is x 'MR Level of Need
-c.dx.needed     is x
-
-rc_dx_dstlist = $dstlist(dx_dstlist,02,
-c.dxr, c.axilev1,c.axilev2,c.axilev3,c.axiilev1,c.axiilev2,c.axiilev3,c.ax3lev1,c.ax3lev2,c.ax3lev3,c.axisiv,c.ax4.a,c.ax4l1com,c.ax4.b,c.ax4l2com,
-c.ax4.c,c.ax4l3com,c.ax4.d,c.ax4l4com,c.ax4.e,c.ax4l5com,c.ax4.f,c.ax4l6com,c.ax4.g,c.ax4l7com,c.ax4.h,c.ax4l8com,c.ax4.i,c.ax4l9com,c.axvcurr, 
-c.axvpast,c.ablcurr,c.ablpoten,c.dx.mrlof,c.dxdate,c.dxaction,c.dxbystaf,c.lz.raj,c.dx.flag,c.dx.fill,c.axisindi,c.ppdind,c.operdxid,c.dia.act,c.dx.mrlon)
-
-  DXType is x
-  DX     is x
-  DXCat  is x
-  DXDate is d
-  DXGaf  is i
-  PP     is x
-  rc     is b 
-
-  rc = $dbread(02, client, dx_dstlist)  
-  dxtype = $dct(dx_dct, c.axilev1, "2")
-  DX     = c.axilev1
-  DXGaf  = $castx(c.axvcurr)
-  DXDate = c.dxdate 
- 
-  if dxtype = "O" and c.axilev2 dp
-   dxtype = $dct(dx_dct, c.axilev2, "2")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
- 	DX = c.axilev2
-   endif
-  endif
-  if dxtype = "O" and c.axilev3 dp
-   dxtype = $dct(dx_dct, c.axilev3, "2")
-   if dxtype = "S" or dxtype = "B" or dxtype = "D"
-    DX = c.axilev3
-   endif
-  endif
-  select DXType
-   case "B" dxcat = "Bipolar"
-   case "S" dxcat = "Schizophrenia"
-   case "D" select DX
-             case "29624" dxcat = "MDD - With Psychotic Features"
-			 case "29634" dxcat = "MDD - With Psychotic Features"
-             case "296.24" dxcat = "MDD - With Psychotic Features"
-			 case "296.34" dxcat = "MDD - With Psychotic Features"			 
-			 case other    dxcat = "MDD - Without Psychotic Features"
-			endselect 
-   case "O" dxcat = "Other"
-   case !dp dxcat = "Other"
-            DXType = "O"
-  endselect
-
-  PP = "N"
-  if DXType = "O"
-   if PriorityPop(c.axilev1) = "Y"
-    PP = "Y"
-   elseif PriorityPop(c.axilev2) = "Y"
-    PP = "Y"
-   elseif PriorityPop(c.axilev3) = "Y"
-    PP = "Y"
-   endif
-  endif  
-  GetDX_PV = DX
- end GETDX_PV 
-
-function PriorityPop(DX) is x
- DX           is x
- PopDXCodes[] is x
- index is i
- index = 0
- PopDXCodes[index++] = "293"
- PopDXCodes[index++] = "293.0"
- PopDXCodes[index++] = "293.81"
- PopDXCodes[index++] = "293.82"
- PopDXCodes[index++] = "293.83"
- PopDXCodes[index++] = "293.84"
- PopDXCodes[index++] = "293.89"
- PopDXCodes[index++] = "293.9"
- PopDXCodes[index++] = "2930"
- PopDXCodes[index++] = "29381"
- PopDXCodes[index++] = "29382"
- PopDXCodes[index++] = "29383"
- PopDXCodes[index++] = "29384"
- PopDXCodes[index++] = "29389"
- PopDXCodes[index++] = "2939"
- PopDXCodes[index++] = "294.0"
- PopDXCodes[index++] = "294.8"
- PopDXCodes[index++] = "294.9"
- PopDXCodes[index++] = "2940"
- PopDXCodes[index++] = "2948"
- PopDXCodes[index++] = "2949"
- PopDXCodes[index++] = "296.90"
- PopDXCodes[index++] = "29690"
- PopDXCodes[index++] = "297.1"
- PopDXCodes[index++] = "297.3"
- PopDXCodes[index++] = "2971"
- PopDXCodes[index++] = "2973"
- PopDXCodes[index++] = "298.8"
- PopDXCodes[index++] = "298.9"
- PopDXCodes[index++] = "2988"
- PopDXCodes[index++] = "2989"
- PopDXCodes[index++] = "300.00"
- PopDXCodes[index++] = "300.01"
- PopDXCodes[index++] = "300.02"
- PopDXCodes[index++] = "300.11"
- PopDXCodes[index++] = "300.12"
- PopDXCodes[index++] = "300.13"
- PopDXCodes[index++] = "300.14"
- PopDXCodes[index++] = "300.15"
- PopDXCodes[index++] = "300.16"
- PopDXCodes[index++] = "300.19"
- PopDXCodes[index++] = "300.21"
- PopDXCodes[index++] = "300.22"
- PopDXCodes[index++] = "300.23"
- PopDXCodes[index++] = "300.29"
- PopDXCodes[index++] = "300.3"
- PopDXCodes[index++] = "300.4"
- PopDXCodes[index++] = "300.6"
- PopDXCodes[index++] = "300.7"
- PopDXCodes[index++] = "300.81"
- PopDXCodes[index++] = "300.82"
- PopDXCodes[index++] = "300.9"
- PopDXCodes[index++] = "30000"
- PopDXCodes[index++] = "30001"
- PopDXCodes[index++] = "30002"
- PopDXCodes[index++] = "30011"
- PopDXCodes[index++] = "30012"
- PopDXCodes[index++] = "30013"
- PopDXCodes[index++] = "30014"
- PopDXCodes[index++] = "30015"
- PopDXCodes[index++] = "30016"
- PopDXCodes[index++] = "30019"
- PopDXCodes[index++] = "30021"
- PopDXCodes[index++] = "30022"
- PopDXCodes[index++] = "30023"
- PopDXCodes[index++] = "30029"
- PopDXCodes[index++] = "3003"
- PopDXCodes[index++] = "3004"
- PopDXCodes[index++] = "3006"
- PopDXCodes[index++] = "3007"
- PopDXCodes[index++] = "30081"
- PopDXCodes[index++] = "30082"
- PopDXCodes[index++] = "3009"
- PopDXCodes[index++] = "301.13"
- PopDXCodes[index++] = "30113"
- PopDXCodes[index++] = "302.2"
- PopDXCodes[index++] = "302.3"
- PopDXCodes[index++] = "302.4"
- PopDXCodes[index++] = "302.6"
- PopDXCodes[index++] = "302.70"
- PopDXCodes[index++] = "302.71"
- PopDXCodes[index++] = "302.72"
- PopDXCodes[index++] = "302.73"
- PopDXCodes[index++] = "302.74"
- PopDXCodes[index++] = "302.75"
- PopDXCodes[index++] = "302.76"
- PopDXCodes[index++] = "302.79"
- PopDXCodes[index++] = "302.81"
- PopDXCodes[index++] = "302.82"
- PopDXCodes[index++] = "302.83"
- PopDXCodes[index++] = "302.84"
- PopDXCodes[index++] = "302.85"
- PopDXCodes[index++] = "302.89"
- PopDXCodes[index++] = "302.9"
- PopDXCodes[index++] = "3022"
- PopDXCodes[index++] = "3023"
- PopDXCodes[index++] = "3024"
- PopDXCodes[index++] = "3026"
- PopDXCodes[index++] = "30270"
- PopDXCodes[index++] = "30271"
- PopDXCodes[index++] = "30272"
- PopDXCodes[index++] = "30273"
- PopDXCodes[index++] = "30274"
- PopDXCodes[index++] = "30275"
- PopDXCodes[index++] = "30276"
- PopDXCodes[index++] = "30279"
- PopDXCodes[index++] = "30281"
- PopDXCodes[index++] = "30282"
- PopDXCodes[index++] = "30283"
- PopDXCodes[index++] = "30284"
- PopDXCodes[index++] = "30285"
- PopDXCodes[index++] = "30289"
- PopDXCodes[index++] = "3029"
- PopDXCodes[index++] = "306.51"
- PopDXCodes[index++] = "30651"
- PopDXCodes[index++] = "307.0"
- PopDXCodes[index++] = "307.1"
- PopDXCodes[index++] = "307.20"
- PopDXCodes[index++] = "307.21"
- PopDXCodes[index++] = "307.22"
- PopDXCodes[index++] = "307.23"
- PopDXCodes[index++] = "307.3"
- PopDXCodes[index++] = "307.42"
- PopDXCodes[index++] = "307.44"
- PopDXCodes[index++] = "307.46"
- PopDXCodes[index++] = "307.47"
- PopDXCodes[index++] = "307.50"
- PopDXCodes[index++] = "307.51"
- PopDXCodes[index++] = "307.52"
- PopDXCodes[index++] = "307.53"
- PopDXCodes[index++] = "307.59"
- PopDXCodes[index++] = "307.6"
- PopDXCodes[index++] = "307.7"
- PopDXCodes[index++] = "307.80"
- PopDXCodes[index++] = "307.89"
- PopDXCodes[index++] = "307.9"
- PopDXCodes[index++] = "3070"
- PopDXCodes[index++] = "3071"
- PopDXCodes[index++] = "30720"
- PopDXCodes[index++] = "30721"
- PopDXCodes[index++] = "30722"
- PopDXCodes[index++] = "30723"
- PopDXCodes[index++] = "3073"
- PopDXCodes[index++] = "30742"
- PopDXCodes[index++] = "30744"
- PopDXCodes[index++] = "30746"
- PopDXCodes[index++] = "30747"
- PopDXCodes[index++] = "30750"
- PopDXCodes[index++] = "30751"
- PopDXCodes[index++] = "30752"
- PopDXCodes[index++] = "30753"
- PopDXCodes[index++] = "30759"
- PopDXCodes[index++] = "3076"
- PopDXCodes[index++] = "3077"
- PopDXCodes[index++] = "30780"
- PopDXCodes[index++] = "30789"
- PopDXCodes[index++] = "3079"
- PopDXCodes[index++] = "308.3"
- PopDXCodes[index++] = "3083"
- PopDXCodes[index++] = "3090"
- PopDXCodes[index++] = "309.0"
- PopDXCodes[index++] = "309.21"
- PopDXCodes[index++] = "309.24"
- PopDXCodes[index++] = "309.28"
- PopDXCodes[index++] = "309.3"
- PopDXCodes[index++] = "309.4"
- PopDXCodes[index++] = "309.81"
- PopDXCodes[index++] = "309.9"
- PopDXCodes[index++] = "3090"
- PopDXCodes[index++] = "30921"
- PopDXCodes[index++] = "30924"
- PopDXCodes[index++] = "30928"
- PopDXCodes[index++] = "3093"
- PopDXCodes[index++] = "3094"
- PopDXCodes[index++] = "30981"
- PopDXCodes[index++] = "3099"
- PopDXCodes[index++] = "310.1"
- PopDXCodes[index++] = "3101"
- PopDXCodes[index++] = "311"
- PopDXCodes[index++] = "312.30"
- PopDXCodes[index++] = "312.31"
- PopDXCodes[index++] = "312.32"
- PopDXCodes[index++] = "312.33"
- PopDXCodes[index++] = "312.34"
- PopDXCodes[index++] = "312.39"
- PopDXCodes[index++] = "312.8"
- PopDXCodes[index++] = "312.81"
- PopDXCodes[index++] = "312.82"
- PopDXCodes[index++] = "312.89"
- PopDXCodes[index++] = "312.9"
- PopDXCodes[index++] = "31230"
- PopDXCodes[index++] = "31231"
- PopDXCodes[index++] = "31232"
- PopDXCodes[index++] = "31233"
- PopDXCodes[index++] = "31234"
- PopDXCodes[index++] = "31239"
- PopDXCodes[index++] = "3128"
- PopDXCodes[index++] = "31281"
- PopDXCodes[index++] = "31282"
- PopDXCodes[index++] = "31289"
- PopDXCodes[index++] = "3129"
- PopDXCodes[index++] = "313.23"
- PopDXCodes[index++] = "313.81"
- PopDXCodes[index++] = "313.82"
- PopDXCodes[index++] = "313.89"
- PopDXCodes[index++] = "313.9"
- PopDXCodes[index++] = "31323"
- PopDXCodes[index++] = "31381"
- PopDXCodes[index++] = "31382"
- PopDXCodes[index++] = "31389"
- PopDXCodes[index++] = "3139"
- PopDXCodes[index++] = "314.00"
- PopDXCodes[index++] = "314.01"
- PopDXCodes[index++] = "314.9"
- PopDXCodes[index++] = "31400"
- PopDXCodes[index++] = "31401"
- PopDXCodes[index++] = "3149"
- PopDXCodes[index++] = "315.00"
- PopDXCodes[index++] = "315.1"
- PopDXCodes[index++] = "315.2"
- PopDXCodes[index++] = "315.31"
- PopDXCodes[index++] = "315.32"
- PopDXCodes[index++] = "315.39"
- PopDXCodes[index++] = "315.4"
- PopDXCodes[index++] = "315.9"
- PopDXCodes[index++] = "31500"
- PopDXCodes[index++] = "3151"
- PopDXCodes[index++] = "3152"
- PopDXCodes[index++] = "31531"
- PopDXCodes[index++] = "31532"
- PopDXCodes[index++] = "31539"
- PopDXCodes[index++] = "3154"
- PopDXCodes[index++] = "3159"
- PopDXCodes[index++] = "316"
- PopDXCodes[index++] = "327.02"
- PopDXCodes[index++] = "327.15"
- PopDXCodes[index++] = "327.31"
- PopDXCodes[index++] = "32702"
- PopDXCodes[index++] = "32715"
- PopDXCodes[index++] = "32731"
- PopDXCodes[index++] = "332.1"
- PopDXCodes[index++] = "3321"
- PopDXCodes[index++] = "333.1"
- PopDXCodes[index++] = "333.7"
- PopDXCodes[index++] = "333.82"
- PopDXCodes[index++] = "333.9"
- PopDXCodes[index++] = "333.92"
- PopDXCodes[index++] = "333.99"
- PopDXCodes[index++] = "3331"
- PopDXCodes[index++] = "3337"
- PopDXCodes[index++] = "33382"
- PopDXCodes[index++] = "33390"
- PopDXCodes[index++] = "33392"
- PopDXCodes[index++] = "33399"
- PopDXCodes[index++] = "347"
- PopDXCodes[index++] = "607.84"
- PopDXCodes[index++] = "60784"
- PopDXCodes[index++] = "608.89"
- PopDXCodes[index++] = "60889"
- PopDXCodes[index++] = "625.0"
- PopDXCodes[index++] = "625.8"
- PopDXCodes[index++] = "6250"
- PopDXCodes[index++] = "6258"
- PopDXCodes[index++] = "780.09"
- PopDXCodes[index++] = "780.59"
- PopDXCodes[index++] = "780.9"
- PopDXCodes[index++] = "78009"
- PopDXCodes[index++] = "78059"
- PopDXCodes[index++] = "7809"
- PopDXCodes[index++] = "787.6"
- PopDXCodes[index++] = "78760"
- PopDXCodes[index++] = "995.2"
- PopDXCodes[index++] = "995.5"
- PopDXCodes[index++] = "995.52"
- PopDXCodes[index++] = "995.53"
- PopDXCodes[index++] = "995.54"
- PopDXCodes[index++] = "995.81"
- PopDXCodes[index++] = "995.83"
- PopDXCodes[index++] = "9952"
- PopDXCodes[index++] = "9955"
- PopDXCodes[index++] = "99552"
- PopDXCodes[index++] = "99553"
- PopDXCodes[index++] = "99554"
- PopDXCodes[index++] = "99581"
- PopDXCodes[index++] = "99583"
- 
- PriorityPop = "N"
- if $find(DX,PopDXCodes[],1,"F") > 1
-  PriorityPop = "Y"
- endif 
-end PriorityPop  
 
 function GetPreviousCANSA(cid,date,current_aloc,CANSANSA,CANSA_Reduction,CANSA_Increase,CANSA_Coc) is null
  cid             is x
@@ -1181,21 +577,32 @@ function GetPreviousCANSA(cid,date,current_aloc,CANSANSA,CANSA_Reduction,CANSA_I
 end GetPreviousCANSA
 
 function GetDX10_uniqid(client,dx_converted) is x
- client           is x
- c.dx10.rh        is h
- c.dx10.uniq.1    is x
- c.dx10.converted is x
- dx_converted     is x
- (void)$dbread(2,client,c.dx10.rh,c.dx10.uniq.1,c.dx10.converted)
- $allowupdate(dx_converted)
- if c.dx10.uniq.1 dp
-  GetDX10_uniqid = c.dx10.uniq.1
-  select c.dx10.converted
-   case "Y"  dx_converted = "ICD109"
-   case "N"  dx_converted = "ICD10"
-   case other dx_converted = "ICD10"
+ client       is x
+ dx_converted is x
+ index        is i 
+ DX10_Code[]  is x
+ DX_Cat[]     is x
+ DX_uniqid[]  is x 
+ $clear(GetDX10_uniqid,dx_converted)
+ $allowupdate(dx_converted)  
+ {"lib_DX10"}getclientdx(client,$today,,,,,,dx10_code[],,,,,dx_cat[],,,,,,,DX_uniqid[],dx_converted)   
+ select dx_converted
+  case "Y" dx_converted = "ICD109"
+  case "N" dx_converted = "ICD10"
+  case other dx_converted = "ICD10"
+ endselect 
+ index = 0
+ do while index++ < $maxarray(dx_cat[]) and GetDX10_uniqid !dp
+  select dx_cat[index]
+   case "TP_B" GetDX10_uniqid = dx_uniqid[index]
+   case "TP_S" GetDX10_uniqid = dx_uniqid[index]
+   case "TP_MDDPF" GetDX10_uniqid = dx_uniqid[index]
+   case "TP_MDDWO" GetDX10_uniqid = dx_uniqid[index]
+   case "ID" GetDX10_uniqid = dx_uniqid[index]
+   case "PP" GetDX10_uniqid = dx_uniqid[index]
   endselect
- else
-  $clear(GetDX10_uniqid,dx_converted)
- endif
+ enddo
+ if GetDX10_uniqid !dp
+  GetDX10_uniqid = dx_uniqid[1]
+ endif     
 end GetDX10_uniqid

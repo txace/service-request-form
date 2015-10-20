@@ -1,0 +1,69 @@
+*GENSRF V2_1 settings                                                           
+*sql connection settings                                                        
+o_user sqltransfer                                                              
+o_pass sqltransfer                                                              
+o_ds svrsql                                                                     
+o_db CMHC_Export                                                                
+ICD10_Table [t_ICD-10_ICD-10_with_GEM_AXIS]                                     
+ICD9_Table [t_ICD-10_ICD-9_with_GEM_AXIS]                                       
+                                                                                
+                                                                                
+*HFC                                                                            
+CLLIST PPSL                                                                     
+center_name Helen Farabee Centers                                               
+center_npi 1457479511                                                           
+center_phone 940-397-3107                                                       
+center_fax 940-696-6205                                                         
+center_contact Judy Michael                                                     
+contact_phone 940-397-3107                                                      
+                                                                                
+c_el_fs-1 13                                                                    
+c_el_fs-2 210                                                                   
+                                                                                
+mco_fs-1 210                                                                    
+                                                                                
+mco_name-1 M-UNITED                                                             
+mco_name-2 M-SUPIOR                                                             
+mco_name-3 M-FRSTCR                                                             
+mco_name-4 M-CIGNA                                                              
+mco_name-5 M-AMGRP                                                              
+mco_name-6 M-AETNA                                                              
+                                                                                
+mco_fax_number-1 877-450-6011                                                   
+mco_fax_number-2 866-469-0725                                                   
+mco_fax_number-3 866-354-8758                                                   
+mco_fax_number-4 877-809-0787                                                   
+mco_fax_number-5 866-877-5229                                                   
+mco_fax_number-6 855-841-8355                                                   
+                                                                                
+**PV                                                                            
+*CLLIST PPSL                                                                    
+*center_name Pecan Valley Centers                                               
+*center_npi 1891915708                                                          
+*center_phone 254-552-2013                                                      
+*center_fax 254-965-1350                                                        
+*center_contact Ernie Smith                                                     
+*contact_phone 254-552-2013                                                     
+                                                                                
+*c_el_fs-1 62                                                                   
+*c_el_fs-2 63                                                                   
+*c_el_fs-3 64                                                                   
+*c_el_fs-4 65                                                                   
+*c_el_fs-5 67                                                                   
+*c_el_fs-6 210                                                                  
+                                                                                
+*mco_fs-1 210                                                                   
+                                                                                
+*mco_name-1 M-UNITED                                                            
+*mco_name-2 M-SUPIOR                                                            
+*mco_name-3 M-FRSTCR                                                            
+*mco_name-4 M-CIGNA                                                             
+*mco_name-5 M-AMGRP                                                             
+*mco_name-6 M-AETNA                                                             
+                                                                                
+*mco_fax_number-1 877-450-6011                                                  
+*mco_fax_number-2 866-469-0725                                                  
+*mco_fax_number-3 866-354-8758                                                  
+*mco_fax_number-4 877-809-0787                                                  
+*mco_fax_number-5 866-877-5229                                                  
+*mco_fax_number-6 855-841-8355                                                  
