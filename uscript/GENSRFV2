@@ -112,7 +112,7 @@ start GENSRFV2(parmfile)
  c.cans.snapid    is x
  c.cans.alocedate is d
  c.cans.alocdate  is d
- c.cans.mconame   is d 
+ c.cans.mconame   is x 
  
  {"lib_DX10"}Set_Sql(o_user, o_pass, o_ds, o_db, icd10_table, icd9_table)
   
