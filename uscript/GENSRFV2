@@ -26,8 +26,8 @@ start GENSRFV2(parmfile)
  cltList[]  is x
 
  %global c_el_fs,mco_fs
- c_el_fs[]        is b
- mco_fs[]         is b
+ c_el_fs[]        is x
+ mco_fs[]         is x
  mco_names[]      is x
  mco_fax_number[] is x 			   
 
@@ -523,10 +523,10 @@ function check_medicaid(client, result, number, mconame) is x
  $clear(result,number,mconame)
  rc = $dbread(02, client, c.el, c.el.fs, c.el.ef.dt, c.el.la.dt, c.el.id.1,$$el.cont)
  do while rc < 2 and result !dp
-  if $find(c.el.fs,c_el_fs[],1,"F") > 0 and c.el.ef.dt <= $today and (c.el.la.dt > $today or c.el.la.dt !dp)
+  if $find($castx(c.el.fs),c_el_fs[],1,"F") > 0 and c.el.ef.dt <= $today and (c.el.la.dt > $today or c.el.la.dt !dp)
    result = "Medicaid Recipient"   
    number = c.el.id.1
-   if $find(c.el.fs,mco_fs[],1,"F") > 0
+   if $find($castx(c.el.fs),mco_fs[],1,"F") > 0
     mconame = $$el.cont
    else
     mconame = "Generic Medicaid"
