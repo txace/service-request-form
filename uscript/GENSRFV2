@@ -149,6 +149,7 @@ start GENSRFV2(parmfile)
  else
   $brmsg(`"Step 1: Read Assessment Data - List: " + CLLIST`,1,"C","Processing") 
   rc = $getlist(cltlist[],2,CLLIST)
+  (void)$sortu(cltlist[])
   clt_index = 0
   index = 0
   do while clt_index++ < $maxarray(cltlist[])
@@ -256,7 +257,8 @@ start GENSRFV2(parmfile)
 					CANSA_ALOC_NAME[index] = $dct(9712,c.ansa.aloc) 
 					CANSA_Start[index] = c.ansa.alocdate
 					CANSA_End[index] =  c.ansa.alocedate
-					CANSA_compd[index] = c.ansa.compd
+'					CANSA_compd[index] = c.ansa.compd
+					CANSA_compd[index] = c.ansa.alocdate
 					CANSA_devjust[index] = c.ansa.devjust
         case "CANS" rc = $dbreaduid(unique_id[index],2,clients[index],c.cans.rec,c.cans.aloc,c.cans.rloc,c.cans.dloc,c.cans.compd,c.cans.type,c.cans.devjust,c.cans.alocedate,c.cans.alocdate)
 	                if c.cans.type = "1"
@@ -269,7 +271,8 @@ start GENSRFV2(parmfile)
 					CANSA_ALOC_NAME[index] = $dct(9705,c.cans.aloc)
 					CANSA_Start[index] = c.cans.alocdate
 					CANSA_End[index] =  c.cans.alocedate 					
-					CANSA_compd[index] = c.cans.compd					
+'					CANSA_compd[index] = c.cans.compd					
+					CANSA_compd[index] = c.cans.alocdate
 					CANSA_devjust[index] = c.cans.devjust					
        endselect 
        (void)$dbread(2,clients[index],c.fn,c.mn,c.ln,c.bd,c.sex)	  
